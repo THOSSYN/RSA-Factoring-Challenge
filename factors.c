@@ -3,39 +3,26 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <gmp.h>
-/**
- * getFactors - factorizes a number
- * @n: the number
- * Return: Nothing
- */
-void getFactors(mpz_t n) {
-    mpz_t factor;
-    mpz_init(factor);
-    mpz_t quotient;
-    mpz_init(quotient);
 
-    mpz_set(quotient, n);
+void getFactors(mpz_t number) {
+    mpz_t factor, quotient;
+    mpz_inits(factor, quotient, NULL);
+
+    mpz_set(quotient, number);
 
     mpz_nextprime(factor, factor);
     while (mpz_cmp(factor, quotient) <= 0) {
         if (mpz_divisible_p(quotient, factor)) {
             mpz_divexact(quotient, quotient, factor);
-            gmp_printf("%Zd = %Zd * %Zd\n", n, factor, quotient);
+            gmp_printf("%Zd=%Zd*%Zd\n", number, quotient, factor);
             break;
         }
         mpz_nextprime(factor, factor);
     }
 
-    mpz_clear(factor);
-    mpz_clear(quotient);
+    mpz_clears(factor, quotient, NULL);
 }
 
-/**
- * main - Reads content of a file
- * @ac: number of arguments on the command line
- * @av: arguments of the command line
- * Return: 0
- */
 int main(int ac, char **av) {
     char *lineptr = NULL;
     size_t nread = 0;
@@ -45,28 +32,36 @@ int main(int ac, char **av) {
 
     mpz_init(number);
 
-    if (ac > 1) {
-        fd = open(av[1], O_RDONLY);
-        if (fd == -1) {
-            dprintf(2, "Usage: %s <file>\n", av[1]);
-            exit(EXIT_FAILURE);
-        }
+    if (ac != 2) {
+        dprintf(2, "Usage: factors <file>\n");
+        exit(EXIT_FAILURE);
     }
-    if (fd != STDIN_FILENO) {
-        fptr = fdopen(fd, "r");
-    } else {
-        fptr = stdin;
+
+    fd = open(av[1], O_RDONLY);
+    if (fd == -1) {
+        dprintf(2, "Error opening the file: %s\n", av[1]);
+        exit(EXIT_FAILURE);
     }
+
+    fptr = fdopen(fd, "r");
+    if (fptr == NULL) {
+        dprintf(2, "Error opening the file: %s\n", av[1]);
+        close(fd);
+        exit(EXIT_FAILURE);
+    }
+
     while ((nread = getline(&lineptr, &nread, fptr)) != -1) {
         mpz_set_str(number, lineptr, 10);
         getFactors(number);
     }
 
     mpz_clear(number);
-
+    free(lineptr);
+    fclose(fptr);
     close(fd);
-    return (0);
+    return 0;
 }
+
 /*#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

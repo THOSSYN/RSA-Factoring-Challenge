@@ -24,43 +24,56 @@ void getFactors(mpz_t number) {
 }
 
 int main(int ac, char **av) {
-    char *lineptr = NULL;
-    size_t nread = 0;
-    int fd = STDIN_FILENO;
-    mpz_t number;
-    FILE *fptr;
-
-    mpz_init(number);
-
     if (ac != 2) {
         dprintf(2, "Usage: factors <file>\n");
         exit(EXIT_FAILURE);
     }
 
-    fd = open(av[1], O_RDONLY);
+    int fd = open(av[1], O_RDONLY);
     if (fd == -1) {
         dprintf(2, "Error opening the file: %s\n", av[1]);
         exit(EXIT_FAILURE);
     }
 
-    fptr = fdopen(fd, "r");
+    FILE *fptr = fdopen(fd, "r");
     if (fptr == NULL) {
         dprintf(2, "Error opening the file: %s\n", av[1]);
         close(fd);
         exit(EXIT_FAILURE);
     }
 
-    while ((nread = getline(&lineptr, &nread, fptr)) != -1) {
-        mpz_set_str(number, lineptr, 10);
+    char *lineptr = NULL;
+    size_t nread = 0;
+    ssize_t read;
+    
+    mpz_t number;
+    mpz_init(number);
+
+    while ((read = getline(&lineptr, &nread, fptr)) != -1) {
+        if (lineptr[read - 1] == '\n') {
+            lineptr[read - 1] = '\0';  // Remove the trailing newline character
+        }
+
+        if (mpz_set_str(number, lineptr, 10) != 0) {
+            dprintf(2, "Invalid number format: %s\n", lineptr);
+            continue;
+        }
+
+        if (mpz_cmp_ui(number, 1) <= 0) {
+            dprintf(2, "Number must be greater than 1: %s\n", lineptr);
+            continue;
+        }
+
         getFactors(number);
     }
 
-    mpz_clear(number);
     free(lineptr);
     fclose(fptr);
     close(fd);
+    mpz_clear(number);
     return 0;
 }
+
 
 /*#include <stdio.h>
 #include <stdlib.h>
